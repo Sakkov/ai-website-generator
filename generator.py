@@ -3,6 +3,7 @@ import sys
 import requests
 import os
 import random
+import time
 
 # Variables
 try:
@@ -17,15 +18,15 @@ openai.api_key = api_key
 # Read URLs from file
 print("Reading URLs from file...")
 urls = []
-with open("website_urls.txt") as file:
+with open("website_urls.txt", "r", encoding="UTF-8") as file:
     lines = file.readlines()
     for line in lines:
         try:
-            url, description = line.strip().split(";")
+            url, url_text , description = line.strip().split(";")
         except ValueError:
             url = line
             description = ""
-        urls.append({"url": url, "description": description})
+        urls.append({"url": url, "text": url_text, "description": description})
 print(f"URLs: {urls}\n\n")
 
 # Use OpenAI API to generate header and paragraph
@@ -60,9 +61,10 @@ paragraph_prompts = []
 for url_dict in urls:
     url = url_dict["url"]
     url_description = url_dict["description"]
+    url_text = url_dict["text"]
     paragraph_prompts.append({"url": url, 
                                 "prompt": f"""Generate few lengthy {website_type} website paragraphs with using the following as context "{url_description}" 
-                                Use the URL: {url} in html a tags in the paragraph like this "<a href="https://{url}">{url}</a>". 
+                                Use the URL: {url} in html a tags in the paragraph like this "<a href="https://{url}">{url_text}</a>". 
                                 Use the {language} language."""})
 print(f"Generated prompts for each URL.\n\n")
 
@@ -86,7 +88,7 @@ print(f"Generated paragraphs: {generated_paragraphs}\n\n")
 
 # Generate header image using DALL·E
 print("Generating header image...")
-header_image_prompt = f"{image_prompt}"
+header_image_prompt = f"{image_prompt} DARK COLORS!"
 header_image_response = openai.Image.create(
     prompt=header_image_prompt,
     n=1,
@@ -110,7 +112,7 @@ print(f"Created directory and image file.\n\n")
 print("Generating HTML, CSS and JavaScrip...")
 html = f"""
 <!DOCTYPE html>
-<html lang="fi">
+<html lang="{language[:2].lower()}">
 <html>
   <head>
     <meta charset="UTF-8">
@@ -121,10 +123,8 @@ html = f"""
     <link rel="stylesheet" href="style.css">
   </head>
   <body>
-    <header>
-        <div class="header_text">
+    <header class="header_text" style="background-image: url(header_image.jpg);">
             <h1>{header}</h1>
-        </div>
     </header>
     <nav>
         <ul>
@@ -137,6 +137,8 @@ html = f"""
     <main>
       {paragraphs_html}
     </main>
+    <footer>
+        <p>© {title} {time.strftime("%Y")} | <a href="#">Privacy Policy</a></p>
     <script src="script.js"></script>
   </body>
 </html>
@@ -189,7 +191,6 @@ if style == "modern":
         text-align: center;
         background-color: #333;
         color: white;
-        background-image: url("header_image.jpg");
     }
 
     .header_text {
@@ -220,14 +221,6 @@ elif style == "classic":
     * {
     box-sizinepeat: no-repeat;
         background-size: cover;
-    }
-
-    .header_text {
-        background-color: rgba(0, 0, 0, 0.5);
-        color: white;
-        margin: 0;g: border-box;
-        font-family: Georgia, serif;
-        font-size: 18px;
     }
 
     nav ul {
@@ -267,10 +260,12 @@ elif style == "classic":
         text-align: center;
         background-color: #CD5C5C;
         color: white;
-        background-image: url("header_image.jpg");
         background-position: center;
         background-r
         padding: 20vh 1vw;
+        margin: 0;g: border-box;
+        font-family: Georgia, serif;
+        font-size: 18px;
     }
 
     .header_text h1 {
@@ -332,7 +327,28 @@ elif style == "random":
     print(f"Your inspiration is {inspiration}!")
     css = openai.Completion.create(
         model="text-davinci-003",
-        prompt=f"""Create innovative css style. Use {inspiration} website as inspiration. The html has the following elements: nav, nav ul, nav li, nav li a, nav li a:hover:not(.active), nav .active, body, header, .header_text, .header_text h1, main, p.\nheader should have "header_image.jpg" as background. Paragraphs should have big paddings and margins.""",
+        prompt=f"""Experimental, complex, unconventional, innovative css style file. "{inspiration}" website as inspiration. 
+                    Huge paddings and margins. Readable, vibrant and high contrast text.  html structure: 
+                    <body>
+                    <header class="header_text" style="background-image: url(header_image.jpg);">
+                            <h1>{header}</h1>
+                    </header>
+                    <nav>
+                        <ul>
+                            <li><a class="active" href="#">Home</a></li>
+                            <li><a href="#">News</a></li>
+                            <li><a href="#">Contact</a></li>
+                            <li><a href="#">About</a></li>
+                        </ul>
+                    </nav>
+                    <main>
+                        (paragraphs_html)
+                    </main>
+                    <footer>
+                        <p>© {title} {time.strftime("%Y")} | <a href="#">Privacy Policy</a></p>
+                    <script src="script.js"></script>
+                    </body>
+                """,
         temperature=0.5,
         max_tokens=2048,
         top_p=0.8,
